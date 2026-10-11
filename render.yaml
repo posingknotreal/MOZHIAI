@@ -25,3 +25,11 @@ services:
         sync: false
       - key: MOZHI_LLM_MODEL
         sync: false
+      - key: MOZHI_EMBEDDING_PROVIDER
+        value: huggingface
+      - key: MOZHI_EMBEDDING_BASE_URL
+        value: https://router.huggingface.co/hf-inference/models
+      - key: MOZHI_EMBEDDING_MODEL
+        value: BAAI/bge-m3
+      - key: MOZHI_EMBEDDING_API_KEY
+        sync: false

@@ -122,6 +122,61 @@ class AppChecks(unittest.TestCase):
             self.assertNotIn("embed-secret", json.dumps(app.provider_config()))
             self.assertEqual(payloads[-1][2], "server-secret")
 
+    def test_huggingface_multilingual_embeddings_use_feature_extraction(self):
+        calls = []
+        def fake_http(url, payload, key=None, timeout=90):
+            calls.append((url, payload, key))
+            if isinstance(payload["inputs"], list):
+                return [[1.0, 0.0], [0.0, 1.0]]
+            return [[1.0, 0.0], [0.0, 1.0]]  # token vectors are mean pooled
+
+        env = {"MOZHI_EMBEDDING_PROVIDER": "huggingface", "MOZHI_EMBEDDING_MODEL": "BAAI/bge-m3",
+               "MOZHI_EMBEDDING_BASE_URL": "https://router.huggingface.co/hf-inference/models",
+               "MOZHI_LLM_API_KEY": "server-secret"}
+        with patch.dict(os.environ, env, clear=True), patch.object(app, "http_json", side_effect=fake_http):
+            vectors = app.embed_many(["Tamil passage", "Tanglish passage"])
+            query = app.embed_query("indha document la enna")
+            self.assertEqual(vectors, [[1.0, 0.0], [0.0, 1.0]])
+            self.assertAlmostEqual(query[0], 2 ** -0.5)
+            self.assertAlmostEqual(query[1], 2 ** -0.5)
+            self.assertEqual(calls[0][0], "https://router.huggingface.co/hf-inference/models/BAAI/bge-m3/pipeline/feature-extraction")
+            self.assertEqual(calls[0][1]["inputs"], ["Tamil passage", "Tanglish passage"])
+            self.assertEqual(calls[0][2], "server-secret")
+            self.assertTrue(app.provider_config()["embedding"])
+            self.assertNotIn("server-secret", json.dumps(app.provider_config()))
+
+    def test_external_llm_requires_a_server_key_and_reports_state(self):
+        env = {"MOZHI_LLM_BASE_URL": "https://router.huggingface.co/v1", "MOZHI_LLM_MODEL": "test/model:provider"}
+        with patch.dict(os.environ, env, clear=True):
+            self.assertFalse(app.provider_config()["llm"])
+            self.assertTrue(app.provider_config()["llmNeedsKey"])
+            with self.assertRaisesRegex(RuntimeError, "MOZHI_LLM_API_KEY"):
+                app.model_complete([{"role": "user", "content": "hello"}])
+
+    def test_provider_state_reports_embedding_key_missing(self):
+        env = {"MOZHI_EMBEDDING_PROVIDER": "huggingface", "MOZHI_EMBEDDING_MODEL": "BAAI/bge-m3"}
+        with patch.dict(os.environ, env, clear=True):
+            state = app.provider_config()
+            self.assertFalse(state["embedding"])
+            self.assertTrue(state["embeddingNeedsKey"])
+
+    def test_grounded_prompt_mirrors_tanglish_and_refuses_unsupported_facts(self):
+        source = {"document": "notes.txt", "page": None, "content": "The learning rate sets the step size.", "score": 0.8}
+        with patch.dict(os.environ, {"MOZHI_LLM_BASE_URL": "https://provider.example/v1", "MOZHI_LLM_MODEL": "chat", "MOZHI_LLM_API_KEY": "test"}, clear=True), \
+                patch.object(app, "model_complete", return_value="It sets the step size. [S1]") as complete:
+            answer = app.grounded_response("indha PDF la Tanglish la sollu", [source], [])
+            self.assertEqual(answer, "It sets the step size. [S1]")
+            system_prompt = complete.call_args.args[0][0]["content"]
+            self.assertIn("Tanglish in natural Latin-script Tanglish", system_prompt)
+            self.assertIn("only source of document facts", system_prompt)
+
+    def test_grounded_chat_does_not_call_model_without_document_evidence(self):
+        env = {"MOZHI_LLM_BASE_URL": "https://provider.example/v1", "MOZHI_LLM_MODEL": "chat", "MOZHI_LLM_API_KEY": "test"}
+        with patch.dict(os.environ, env, clear=True), patch.object(app, "model_complete") as complete:
+            answer = app.grounded_response("What is in the file?", [], [])
+            self.assertIn("couldn’t find supporting passages", answer)
+            complete.assert_not_called()
+
     def test_optional_qdrant_adapter_and_document_filter(self):
         calls = []
         def fake_request(method, path, payload=None, timeout=25):

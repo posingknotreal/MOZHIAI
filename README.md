@@ -40,9 +40,10 @@ Set these in the server environment before starting the app:
 - `MOZHI_LLM_BASE_URL` — OpenAI-compatible chat completions URL (for example, an Ollama-compatible `/v1` endpoint).
 - `MOZHI_LLM_API_KEY` — provider key, if required. Keep it in the server environment only.
 - `MOZHI_LLM_MODEL` — model identifier.
-- `MOZHI_EMBEDDING_BASE_URL` — optional OpenAI-compatible embeddings endpoint.
-- `MOZHI_EMBEDDING_API_KEY` — optional embedding provider key.
-- `MOZHI_EMBEDDING_MODEL` — optional embedding model.
+- `MOZHI_EMBEDDING_PROVIDER` — `openai` for an OpenAI-compatible endpoint or `huggingface` for HF Inference Providers feature extraction.
+- `MOZHI_EMBEDDING_BASE_URL` — optional embedding API root; HF defaults to `https://router.huggingface.co/hf-inference/models`.
+- `MOZHI_EMBEDDING_API_KEY` — optional separate embedding key; HF mode can reuse the server-side `MOZHI_LLM_API_KEY`.
+- `MOZHI_EMBEDDING_MODEL` — embedding model ID; a multilingual HF option is `BAAI/bge-m3`.
 - `MOZHI_TESSERACT_CMD` — optional path override for the local `tesseract` executable.
 - `MOZHI_TESSERACT_LANG` — OCR language codes joined with `+`; defaults to `tam+eng`.
 - `MOZHI_OCR_DPI` — PDF render resolution; defaults to 240 and is limited to 120–300 DPI.
@@ -64,6 +65,8 @@ py app.py
 ```
 
 For a hosted provider, also set `MOZHI_LLM_API_KEY` in the server environment. Keys are read only by the Python server; the browser never receives them. The default database and vector store need no separate service: they live in SQLite at `data/mozhi.sqlite3`. If using Qdrant, run your Qdrant service separately; MOZHIAI creates the configured collection on first use and still keeps a local SQLite fallback.
+
+For Hugging Face Inference Providers, use `MOZHI_LLM_BASE_URL=https://router.huggingface.co/v1`, a chat model ID with an available provider, and a token with **Make calls to Inference Providers** permission. For multilingual hosted embeddings using that same token, set `MOZHI_EMBEDDING_PROVIDER=huggingface`, `MOZHI_EMBEDDING_BASE_URL=https://router.huggingface.co/hf-inference/models`, and `MOZHI_EMBEDDING_MODEL=BAAI/bge-m3`. Provider credit and model availability limits apply. Set embedding configuration before uploading documents so indexed and query vectors use the same model.
 
 When no AI endpoint is configured, documents remain searchable with local BM25 and deterministic feature-hash vectors stored in SQLite. Offline answers are source excerpts with citations; translation clearly reports that a language model is required instead of returning a fake translation. Offline summary is extractive; explain mode shows relevant evidence and says when a generated explanation needs a language model. Qdrant is an optional vector backend with SQLite fallback. A configured remote OCR adapter, or local Tesseract when available, is called only for PDF pages with no extractable text. Rendering and recognition happen locally by default.
 
