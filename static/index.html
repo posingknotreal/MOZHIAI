@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f7f8f6" />
+  <title>MOZHIAI — Tamil language intelligence</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><div class="brand-mark">மொ</div><div><strong>MOZHIAI</strong><span>Tamil intelligence</span></div><button class="icon-button mobile-close" id="closeSidebar" aria-label="Close menu">×</button></div>
+      <button class="new-chat" id="newChat"><span class="plus">＋</span> New conversation <kbd>⌘ K</kbd></button>
+      <div class="side-label">WORKSPACE</div>
+      <nav class="side-nav" aria-label="Workspace">
+        <button class="nav-item active" data-view="chat"><span class="nav-icon">◉</span> Ask your documents</button>
+        <button class="nav-item" data-view="search"><span class="nav-icon">⌕</span> Semantic search</button>
+        <button class="nav-item" data-view="library"><span class="nav-icon">▤</span> Document library <span class="count" id="docCount">0</span></button>
+      </nav>
+      <div class="side-label history-label">RECENT CHATS <button id="clearChatFilter" title="Clear selected chat">↻</button></div>
+      <div id="chatList" class="chat-list"><div class="empty-side">Your conversations will appear here.</div></div>
+      <div class="sidebar-bottom">
+        <div class="provider-card"><span class="status-dot" id="providerDot"></span><div><strong id="providerTitle">Checking services…</strong><small id="providerSub">Private local workspace</small></div><button class="icon-button" id="settingsButton" aria-label="Setup and settings">⚙</button></div>
+        <div class="privacy-note" id="privacyNote">Files & indexes stay on this device</div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <button class="icon-button menu-button" id="openSidebar" aria-label="Open menu">☰</button>
+        <div class="breadcrumbs"><span>Workspace</span><i>/</i><strong id="viewTitle">Ask documents</strong></div>
+        <div class="top-actions"><span class="language-chip"><span>அ</span> தமிழ் · English</span><button class="avatar" title="Local workspace">M</button></div>
+      </header>
+      <section class="workspace" id="chatView">
+        <div class="conversation-column">
+          <div class="welcome" id="welcome">
+            <div class="eyebrow"><span class="sparkle">✳</span> TAMIL-FIRST DOCUMENT INTELLIGENCE</div>
+            <h1>Vanakkam. <span>வணக்கம்.</span></h1>
+            <p class="welcome-copy">Bring your Tamil and English documents. Ask naturally—in Tamil, English, Tanglish, or all three.</p>
+            <div class="upload-box" id="dropZone">
+              <input type="file" id="fileInput" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" multiple hidden />
+              <div class="upload-icon">↑</div><div class="upload-text"><strong>Drop documents here, or <button class="text-button" id="browseFiles">browse files</button></strong><span>PDF, DOCX or TXT · up to 30 MB per file</span></div>
+              <div class="upload-progress hidden" id="uploadProgress"><span></span></div>
+            </div>
+            <div class="starter-label">START WITH A QUESTION</div>
+            <div class="starter-grid">
+              <button class="starter-card" data-prompt="indha document la enna irukku?"><span class="starter-symbol lavender">◌</span><span><strong>Understand a document</strong><small>“இந்த document-ல என்ன இருக்கு?”</small></span><b>↗</b></button>
+              <button class="starter-card" data-prompt="Summarize the selected document in simple Tamil."><span class="starter-symbol mint">≋</span><span><strong>Get a quick summary</strong><small>Turn long files into clear takeaways</small></span><b>↗</b></button>
+              <button class="starter-card" data-prompt="Explain the main idea simply, in Tamil."><span class="starter-symbol peach">✳</span><span><strong>Explain it simply</strong><small>Make technical ideas easier to follow</small></span><b>↗</b></button>
+            </div>
+            <div class="trust-line"><span>◈</span> Answers cite the exact document and page when available.</div>
+          </div>
+          <div class="messages hidden" id="messages" aria-live="polite"></div>
+          <div class="composer-wrap">
+            <div class="selected-docs hidden" id="selectedDocs"></div>
+            <form class="composer" id="chatForm"><textarea id="messageInput" rows="1" placeholder="Ask in Tamil, English, or Tanglish…" aria-label="Ask a question"></textarea><div class="composer-footer"><div class="composer-tools"><button type="button" class="tool-button" id="attachButton" title="Add documents">＋ <span>Add files</span></button><select id="scopeSelect" aria-label="Document scope"><option value="all">All documents</option></select><span class="privacy-inline" id="composerPrivacy">Local processing</span></div><button class="send-button" id="sendButton" aria-label="Send message">↑</button></div></form>
+            <div class="composer-hint">MOZHIAI can make mistakes. Verify important details in the cited source.</div>
+          </div>
+        </div>
+        <aside class="source-panel" id="sourcePanel">
+          <div class="panel-heading"><div><span class="panel-kicker">YOUR KNOWLEDGE BASE</span><h2>Documents <span id="panelDocCount">0</span></h2></div><button class="icon-button" id="panelAdd" aria-label="Upload documents">＋</button></div>
+          <div class="doc-search"><span>⌕</span><input type="search" id="docSearch" placeholder="Find a document" aria-label="Find a document" /></div>
+          <div class="document-list" id="documentList"><div class="empty-docs"><div class="empty-icon">▱</div><strong>No documents yet</strong><span>Upload a file to start asking questions.</span><button id="emptyUpload" class="secondary-button">Upload a document</button></div></div>
+          <div class="panel-footer"><span class="status-dot"></span><span id="storageLabel">Stored on this device</span></div>
+        </aside>
+      </section>
+
+      <section class="search-view hidden" id="searchView">
+        <div class="view-intro"><div class="eyebrow">FIND MEANING, NOT JUST MATCHING WORDS</div><h1>Search your knowledge.</h1><p>Look across document passages using lexical and local semantic signals.</p></div>
+        <div class="large-search"><span>⌕</span><input id="searchInput" placeholder="Search in Tamil, English, or Tanglish…" /><button id="searchButton">Search</button></div>
+        <div class="search-meta" id="searchMeta">Upload documents to search your knowledge base.</div><div class="search-results" id="searchResults"></div>
+      </section>
+      <section class="library-view hidden" id="libraryView">
+        <div class="view-intro library-intro"><div><div class="eyebrow">YOUR PRIVATE KNOWLEDGE BASE</div><h1>Document library</h1><p>Manage the source files MOZHIAI can search and cite.</p></div><button class="primary-button" id="libraryUpload">＋ Upload documents</button></div>
+        <div class="library-summary"><div><span id="libraryCount">0</span><small>documents</small></div><div><span id="libraryPages">0</span><small>PDF pages indexed</small></div><div><span id="libraryChunks">0</span><small>searchable passages</small></div></div>
+        <div class="library-table" id="libraryTable"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="viewer-backdrop hidden" id="viewerBackdrop"></div>
+  <aside class="viewer hidden" id="viewer" aria-label="Document viewer">
+    <div class="viewer-top"><div><span class="panel-kicker">SOURCE DOCUMENT</span><h2 id="viewerTitle">Document</h2></div><button class="icon-button" id="closeViewer" aria-label="Close viewer">×</button></div>
+    <div class="viewer-tools" id="pdfTools"><label>Page <input type="number" id="pageNumber" min="1" value="1" /></label><span id="pageTotal"></span><button id="goToPage">Go</button><button class="icon-button" id="previousPage" aria-label="Previous page">‹</button><button class="icon-button" id="nextPage" aria-label="Next page">›</button></div>
+    <div class="viewer-content" id="viewerContent"></div>
+  </aside>
+
+  <dialog id="settingsDialog" class="settings-dialog"><form method="dialog"><button class="icon-button dialog-close" aria-label="Close">×</button><div class="eyebrow">LOCAL WORKSPACE</div><h2>Service status</h2><p id="settingsStatus"></p><div class="settings-info"><strong>Offline mode works without keys.</strong><span>Local search, storage, document extraction, and cited evidence are available. Generated answers and translation activate when a compatible chat model is configured in the server environment.</span></div><div class="settings-info"><strong>Server configuration</strong><code>MOZHI_LLM_BASE_URL<br/>MOZHI_LLM_API_KEY<br/>MOZHI_LLM_MODEL<br/>MOZHI_EMBEDDING_BASE_URL<br/>MOZHI_EMBEDDING_API_KEY<br/>MOZHI_EMBEDDING_MODEL</code></div><button class="primary-button dialog-done">Done</button></form></dialog>
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
