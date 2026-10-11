@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: mozhiai
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: MOZHI_HOST
+        value: 0.0.0.0
+      - key: MOZHI_PORT
+        value: 10000
+      - key: MOZHI_DATA_DIR
+        value: /data
+      - key: MOZHI_DB_PATH
+        value: /data/mozhi.sqlite3
+      - key: MOZHI_TESSERACT_LANG
+        value: tam+eng
+      - key: MOZHI_AUTH_USER
+        sync: false
+      - key: MOZHI_AUTH_PASSWORD
+        sync: false
+      - key: MOZHI_LLM_BASE_URL
+        sync: false
+      - key: MOZHI_LLM_API_KEY
+        sync: false
+      - key: MOZHI_LLM_MODEL
+        sync: false
