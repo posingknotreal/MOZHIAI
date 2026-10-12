@@ -59,7 +59,7 @@ function renderDocuments() {
     $('#emptyUpload')?.addEventListener('click', openFilePicker); return;
   }
   list.innerHTML = docs.map(d => `<div class="document-card" data-doc="${d.id}" tabindex="0" role="button" aria-label="Open ${escapeHtml(d.name)}">${fileIcon(d.extension)}<span class="file-meta"><strong>${escapeHtml(d.name)}</strong><small>${formatSize(d.size)}${d.pageCount ? ` · ${d.pageCount} pages` : ''}</small></span><span class="file-state ${d.status === 'error' ? 'error' : ''}">${d.status === 'processing' ? 'Queued…' : d.status === 'extracting' ? 'Extracting…' : d.status === 'indexing' ? 'Indexing…' : d.status === 'error' ? 'Needs attention' : d.warning ? 'Partial text' : 'Ready'}</span><button class="remove-doc" data-remove="${d.id}" title="Remove document" aria-label="Remove ${escapeHtml(d.name)}">×</button></div>${d.error ? `<div class="error-note" style="font-size:9px;color:#a75850;padding:0 8px 7px">${escapeHtml(d.error)}</div>` : d.warning ? `<div class="warning-note" style="font-size:9px;color:#9a783a;padding:0 8px 7px">${escapeHtml(d.warning)}</div>` : ''}`).join('');
-  $$('.document-card').forEach(card => { card.addEventListener('click', e => { if (e.target.closest('.remove-doc')) return; openViewer(card.dataset.doc); }); card.addEventListener('keydown', e => { if (e.key === 'Enter') openViewer(card.dataset.doc); }); });
+  $$('.document-card').forEach(card => { card.addEventListener('click', e => { if (e.target.closest('.remove-doc')) return; openViewer(card.dataset.doc); }); card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openViewer(card.dataset.doc); } }); });
   $$('.remove-doc').forEach(button => button.addEventListener('click', e => { e.stopPropagation(); removeDocument(button.dataset.remove); }));
 }
 function renderLibrary() {
@@ -69,7 +69,7 @@ function renderLibrary() {
   const table = $('#libraryTable');
   if (!state.documents.length) { table.innerHTML = '<div class="empty-docs"><div class="empty-icon">▱</div><strong>Your library is empty</strong><span>Upload a PDF, DOCX, or TXT file to begin.</span><button class="secondary-button" id="libraryEmptyUpload">Upload a document</button></div>'; $('#libraryEmptyUpload')?.addEventListener('click', openFilePicker); return; }
   table.innerHTML = `<div class="library-row header"><span>DOCUMENT</span><span>SIZE</span><span>FORMAT</span><span>STATUS</span><span></span></div>` + state.documents.map(d => `<div class="library-row"><div class="library-name" data-open="${d.id}" role="button" tabindex="0">${fileIcon(d.extension)}<strong>${escapeHtml(d.name)}</strong></div><span>${formatSize(d.size)}</span><span>${d.extension.slice(1).toUpperCase()}</span><span class="file-state ${d.status === 'error' ? 'error' : ''}">${d.status === 'ready' ? d.warning ? 'Partial text' : 'Ready' : d.status === 'error' ? 'Error' : d.status === 'extracting' ? 'Extracting' : 'Indexing'}</span><button class="remove-doc" data-remove="${d.id}">Remove</button></div>${d.error ? `<div class="warning-note" style="font-size:9px;color:#a75850;padding:0 8px 7px">${escapeHtml(d.error)}</div>` : d.warning ? `<div class="warning-note" style="font-size:9px;color:#9a783a;padding:0 8px 7px">${escapeHtml(d.warning)}</div>` : ''}`).join('');
-  $$('[data-open]').forEach(e => e.addEventListener('click', () => openViewer(e.dataset.open)));
+  $$('[data-open]').forEach(e => { e.addEventListener('click', () => openViewer(e.dataset.open)); e.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openViewer(e.dataset.open); } }); });
   $$('.library-row .remove-doc').forEach(e => e.addEventListener('click', () => removeDocument(e.dataset.remove)));
 }
 async function removeDocument(id) {
@@ -133,17 +133,20 @@ async function sendChat(textOverride = null, mode = 'chat') {
   finally { state.loading = false; $('#sendButton').disabled = false; input.focus(); }
 }
 async function quickAction(mode) {
+  if (state.loading) return;
   const text = $('#messageInput').value.trim();
   if (!text && !state.documents.some(d => d.status === 'ready')) { toast('Upload or select a document first.', true); return; }
-  state.loading = true;
+  const label = `${mode[0].toUpperCase()+mode.slice(1)}${text ? `: ${text}` : ' selected document(s)'}`;
+  $('#messageInput').value = ''; resizeInput();
+  state.loading = true; $('#sendButton').disabled = true;
+  $$('.quick-actions button').forEach(button => { button.disabled = true; });
+  appendMessage('user', label); const pending = appendMessage('assistant', '', [], true);
   try {
     const data = await api('/api/action', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,text,chatId:state.chatId,documentIds:getSelectedDocs()})});
-    if (text) $('#messageInput').value = '';
-    appendMessage('user', `${mode[0].toUpperCase()+mode.slice(1)}${text ? `: ${text}` : ' selected document(s)'}`);
-    appendMessage('assistant', data.answer, data.citations);
+    document.getElementById(pending)?.remove(); appendMessage('assistant', data.answer, data.citations);
     state.chatId = data.chatId; await refreshChats();
-  } catch (error) { toast(error.message, true); }
-  finally { state.loading = false; }
+  } catch (error) { document.getElementById(pending)?.remove(); appendMessage('assistant', `I couldn’t complete ${mode}. ${error.message}`); toast(error.message, true); }
+  finally { state.loading = false; $('#sendButton').disabled = false; $$('.quick-actions button').forEach(button => { button.disabled = false; }); }
 }
 async function refreshChats() {
   const {chats} = await api('/api/chats'); state.chats = chats;
