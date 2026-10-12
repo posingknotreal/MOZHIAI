@@ -14,7 +14,8 @@
     'Search & cited evidence ready': 'தேடலும் ஆதார மேற்கோள்களும் தயார்', 'Local offline mode': 'உள்ளக இணையமற்ற பயன்முறை',
     'AI configured': 'AI அமைக்கப்பட்டது', 'AI setup needed': 'AI அமைப்பு தேவை', 'Offline mode': 'இணையமற்ற பயன்முறை',
     'Service unavailable': 'சேவை கிடைக்கவில்லை', 'Server unavailable': 'சேவையகம் கிடைக்கவில்லை', 'Check the app connection': 'செயலி இணைப்பைச் சரிபார்க்கவும்',
-    'Setup and settings': 'அமைப்பு மற்றும் விருப்பங்கள்', 'Files & indexes stay on this device': 'கோப்புகளும் குறியீடுகளும் இந்தச் சாதனத்தில் இருக்கும்',
+    'Setup and settings': 'அமைப்பு மற்றும் விருப்பங்கள்', 'AI service status': 'AI சேவை நிலை', 'MOZHIAI workspace': 'MOZHIAI பணியிடம்',
+    'Files & indexes stay on this device': 'கோப்புகளும் குறியீடுகளும் இந்தச் சாதனத்தில் இருக்கும்',
     'Files & indexes are stored on this server': 'கோப்புகளும் குறியீடுகளும் இந்தச் சேவையகத்தில் சேமிக்கப்படும்',
     'Selected content may be sent to AI providers': 'தேர்ந்த உள்ளடக்கம் AI சேவைகளுக்கு அனுப்பப்படலாம்',
     'Configured providers': 'அமைக்கப்பட்ட சேவைகள்', 'Local processing': 'உள்ளகச் செயலாக்கம்',
@@ -118,6 +119,8 @@
     if (dynamic) return `${dynamic[1]} ஆவணங்கள்`;
     dynamic = trimmed.match(/^(\d+) KB · (\d+) pages?$/i);
     if (dynamic) return `${dynamic[1]} KB · ${dynamic[2]} பக்கங்கள்`;
+    dynamic = trimmed.match(/^(.+ · )(\d+) pages?$/i);
+    if (dynamic) return `${dynamic[1]}${dynamic[2]} பக்கங்கள்`;
     dynamic = trimmed.match(/^· Page (\d+)$/i);
     if (dynamic) return `· பக்கம் ${dynamic[1]}`;
     dynamic = trimmed.match(/^· Page unavailable$/i);
@@ -127,7 +130,7 @@
     dynamic = trimmed.match(/^Remove “(.+)” and its local indexed data\? This cannot be undone\.$/i);
     if (dynamic) return `“${dynamic[1]}” ஆவணத்தையும் அதன் உள்ளகக் குறியீட்டுத் தரவையும் அகற்றவா? இதை மாற்ற முடியாது.`;
     dynamic = trimmed.match(/^Database: (.+)\. Vector search: (.+)\. (.+)$/i);
-    if (dynamic) return `${translatedText(`Database: ${dynamic[1]}.`)} ${translatedText(`Vector search: ${dynamic[2]}.`)} ${translatedText(dynamic[3])}`;
+    if (dynamic) return `${translatedText(`Database: ${dynamic[1]}.`)} ${translatedText(`Vector search: ${dynamic[2]}.`)} ${dynamic[3].split(/(?<=\.)\s+/).map(translatedText).join(' ')}`;
     dynamic = trimmed.match(/^Database: (.+)\.$/i);
     if (dynamic) return `தரவுத்தளம்: ${dynamic[1]}.`;
     dynamic = trimmed.match(/^Vector search: (.+)\.$/i);
