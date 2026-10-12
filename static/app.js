@@ -1,6 +1,6 @@
 const $ = (q) => document.querySelector(q);
 const $$ = (q) => [...document.querySelectorAll(q)];
-const state = { documents: [], chats: [], chatId: null, activeView: 'chat', loading: false, viewerDoc: null, messageCache: [] };
+const state = { documents: [], chats: [], chatId: null, activeView: 'chat', loading: false, viewerDoc: null, messageCache: [], recognition: null, voiceRecording: false };
 
 async function api(url, options = {}) {
   const response = await fetch(url, options);
@@ -107,7 +107,7 @@ function setView(name) {
   $('#sidebar').classList.remove('open');
   if (name === 'library') refreshDocuments().catch(e => toast(e.message, true));
 }
-function resetChat() { state.chatId = null; state.messageCache = []; $('#messages').innerHTML = ''; $('#messages').classList.add('hidden'); $('#welcome').classList.remove('hidden'); $('#messageInput').value = ''; $('#messageInput').focus(); $$('.history-item').forEach(el => el.classList.remove('selected')); }
+function resetChat() { if (state.voiceRecording) stopVoiceRecognition(); state.chatId = null; state.messageCache = []; $('#messages').innerHTML = ''; $('#messages').classList.add('hidden'); $('#welcome').classList.remove('hidden'); $('#messageInput').value = ''; $('#messageInput').focus(); $$('.history-item').forEach(el => el.classList.remove('selected')); }
 
 function appendMessage(role, content, citations = [], pending = false) {
   $('#welcome').classList.add('hidden'); const list = $('#messages'); list.classList.remove('hidden');
@@ -121,6 +121,7 @@ function appendMessage(role, content, citations = [], pending = false) {
 function renderMessages(messages) { $('#messages').innerHTML = ''; $('#messages').classList.toggle('hidden', !messages.length); $('#welcome').classList.toggle('hidden', !!messages.length); messages.forEach(m => appendMessage(m.role, m.content, m.citations || [])); }
 async function sendChat(textOverride = null, mode = 'chat') {
   const input = $('#messageInput'); const message = (textOverride ?? input.value).trim();
+  if (state.voiceRecording) { stopVoiceRecognition(); setVoiceStatus('Recording stopped. Review the transcription, then send it.', false); return; }
   if (!message || state.loading) return;
   if (!state.documents.some(d => d.status === 'ready')) { toast('Upload a document first so answers can be grounded in your sources.', true); return; }
   input.value = ''; resizeInput(); state.loading = true; $('#sendButton').disabled = true;
@@ -133,6 +134,7 @@ async function sendChat(textOverride = null, mode = 'chat') {
   finally { state.loading = false; $('#sendButton').disabled = false; input.focus(); }
 }
 async function quickAction(mode) {
+  if (state.voiceRecording) { stopVoiceRecognition(); setVoiceStatus('Recording stopped. Review the transcription, then try the action again.', false); return; }
   if (state.loading) return;
   const text = $('#messageInput').value.trim();
   if (!text && !state.documents.some(d => d.status === 'ready')) { toast('Upload or select a document first.', true); return; }
@@ -185,6 +187,81 @@ async function openViewer(id, page = null) {
 function closeViewer() { $('#viewer').classList.add('hidden'); $('#viewerBackdrop').classList.add('hidden'); state.viewerDoc = null; }
 function goPage(page) { if (!state.viewerDoc) return; const doc = state.documents.find(d => d.id === state.viewerDoc); const p = Math.max(1, Math.min(Number(page) || 1, doc.pageCount || 99999)); $('#pageNumber').value = p; $('#viewerContent iframe').src = `/api/documents/${state.viewerDoc}/file#page=${p}&view=FitH`; }
 function resizeInput() { const el = $('#messageInput'); el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight, 140)}px`; }
+
+function setVoiceStatus(message, isError = false) {
+  const status = $('#voiceStatus'); status.textContent = message; status.classList.toggle('error', isError);
+}
+function setVoiceRecordingUi(recording) {
+  const button = $('#voiceButton'); state.voiceRecording = recording;
+  button.setAttribute('aria-pressed', String(recording)); button.querySelector('span').textContent = recording ? 'Stop' : 'Speak';
+  $('#voiceLanguage').disabled = recording;
+  $('#sendButton').disabled = recording || state.loading;
+  $$('.quick-actions button').forEach(action => { action.disabled = recording || state.loading; });
+  if (recording) button.setAttribute('aria-label', 'Stop voice recording');
+  else button.setAttribute('aria-label', 'Start voice input');
+}
+function stopVoiceRecognition() {
+  if (!state.recognition || !state.voiceRecording) return;
+  setVoiceStatus('Finishing voice input…');
+  try { state.recognition.stop(); } catch { /* The recognizer may already have ended. */ }
+}
+function startVoiceRecognition() {
+  if (state.voiceRecording) { stopVoiceRecognition(); return; }
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) { setVoiceStatus('Voice recognition is not available in this browser. Type your question instead.', true); return; }
+  if (!window.isSecureContext && !['localhost', '127.0.0.1', '::1'].includes(location.hostname)) {
+    setVoiceStatus('Voice input requires a secure connection (HTTPS). You can type your question instead.', true); return;
+  }
+
+  const recognition = new Recognition(); let transcript = ''; let recognitionError = '';
+  recognition.lang = $('#voiceLanguage').value;
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+  state.recognition = recognition;
+  setVoiceRecordingUi(true);
+  setVoiceStatus(`Listening in ${$('#voiceLanguage').selectedOptions[0].textContent}…`);
+  recognition.onresult = event => {
+    let complete = ''; let interim = '';
+    for (let i = 0; i < event.results.length; i++) {
+      const resultText = event.results[i][0]?.transcript || '';
+      if (event.results[i].isFinal) complete += resultText;
+      else interim += resultText;
+    }
+    if (complete.trim()) transcript = complete.trim();
+    if (interim.trim()) setVoiceStatus('Hearing your question…');
+  };
+  recognition.onerror = event => {
+    const messages = {
+      'not-allowed': 'Microphone access was denied. Allow microphone access for this site, then try again.',
+      'service-not-allowed': 'The browser did not allow its speech service. You can type your question instead.',
+      'audio-capture': 'No microphone was found. Check your microphone or type your question.',
+      'network': 'The browser speech service could not be reached. You can type your question instead.',
+      'no-speech': 'No speech was detected. Try again or type your question.',
+      'language-not-supported': 'The browser speech service does not support this language. Choose English or type your question.',
+      'aborted': 'Voice input was stopped.'
+    };
+    recognitionError = messages[event.error] || 'Voice input could not start. You can type your question instead.';
+  };
+  recognition.onend = () => {
+    state.recognition = null;
+    setVoiceRecordingUi(false);
+    if (transcript) {
+      const input = $('#messageInput');
+      input.value = `${input.value.trimEnd()}${input.value.trim() ? ' ' : ''}${transcript}`;
+      resizeInput(); input.focus(); input.setSelectionRange(input.value.length, input.value.length);
+      setVoiceStatus('Transcription added. Review or edit it before sending.');
+    } else if (recognitionError) setVoiceStatus(recognitionError, true);
+    else setVoiceStatus('No speech was captured. Tap Speak to try again.', true);
+  };
+  try { recognition.start(); }
+  catch { state.recognition = null; setVoiceRecordingUi(false); setVoiceStatus('Voice input could not start. Check microphone access and try again.', true); }
+}
+
+$('#voiceButton').addEventListener('click', startVoiceRecognition);
+if (!(window.SpeechRecognition || window.webkitSpeechRecognition)) {
+  $('#voiceButton').title = 'Voice recognition is not available in this browser. Type your question instead.';
+}
 
 $('#browseFiles').addEventListener('click', openFilePicker); $('#attachButton').addEventListener('click', openFilePicker); $('#panelAdd').addEventListener('click', openFilePicker); $('#emptyUpload')?.addEventListener('click', openFilePicker); $('#libraryUpload').addEventListener('click', openFilePicker); $('#fileInput').addEventListener('change', e => uploadFiles(e.target.files));
 $('#dropZone').addEventListener('dragover', e => { e.preventDefault(); $('#dropZone').classList.add('dragover'); });
