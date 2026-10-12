@@ -30,7 +30,7 @@
       <header class="topbar">
         <button class="icon-button menu-button" id="openSidebar" aria-label="Open menu">☰</button>
         <div class="breadcrumbs"><span>Workspace</span><i>/</i><strong id="viewTitle">Ask documents</strong></div>
-        <div class="top-actions"><span class="language-chip"><span>அ</span> தமிழ் · English</span><button class="avatar" title="Local workspace">M</button></div>
+        <div class="top-actions"><button class="service-chip" id="serviceChip" type="button" aria-label="AI service status"><span class="service-chip-dot"></span><span id="serviceChipLabel">Checking AI…</span></button><span class="language-chip"><span>அ</span> தமிழ் · English</span><button class="avatar" title="MOZHIAI workspace">மொ</button></div>
       </header>
       <section class="workspace" id="chatView">
         <div class="conversation-column">
@@ -86,7 +86,7 @@
     <div class="viewer-content" id="viewerContent"></div>
   </aside>
 
-  <dialog id="settingsDialog" class="settings-dialog"><form method="dialog"><button class="icon-button dialog-close" aria-label="Close">×</button><div class="eyebrow">LOCAL WORKSPACE</div><h2>Service status</h2><p id="settingsStatus"></p><div class="settings-info"><strong>Offline mode works without keys.</strong><span>Local search, storage, document extraction, and cited evidence are available. Generated answers and translation activate when a compatible chat model is configured in the server environment.</span></div><div class="settings-info"><strong>Server configuration</strong><code>MOZHI_LLM_BASE_URL<br/>MOZHI_LLM_API_KEY<br/>MOZHI_LLM_MODEL<br/>MOZHI_EMBEDDING_BASE_URL<br/>MOZHI_EMBEDDING_API_KEY<br/>MOZHI_EMBEDDING_MODEL</code></div><button class="primary-button dialog-done">Done</button></form></dialog>
+  <dialog id="settingsDialog" class="settings-dialog"><form method="dialog"><button class="icon-button dialog-close" aria-label="Close">×</button><div class="eyebrow">WORKSPACE STATUS</div><h2>Service status</h2><p id="settingsStatus"></p><div class="settings-info"><strong>Document tools work without an AI key.</strong><span>Extraction, storage, search, and citations are handled by the app server. Generated answers and translation require a configured online chat provider.</span></div><div class="settings-info"><strong>Server configuration</strong><code>MOZHI_LLM_BASE_URL<br/>MOZHI_LLM_API_KEY<br/>MOZHI_LLM_MODEL<br/>MOZHI_EMBEDDING_BASE_URL<br/>MOZHI_EMBEDDING_API_KEY<br/>MOZHI_EMBEDDING_MODEL</code></div><button class="primary-button dialog-done">Done</button></form></dialog>
   <div class="toast-region" id="toastRegion" aria-live="polite"></div>
   <script src="/static/app.js" defer></script>
 </body>

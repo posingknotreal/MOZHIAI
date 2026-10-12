@@ -17,11 +17,15 @@ function fileIcon(ext) { return `<span class="file-icon ${ext.slice(1)}">${escap
 async function refreshHealth() {
   try {
     const { provider } = await api('/api/health');
-    $('#providerTitle').textContent = provider.llm ? 'AI provider ready' : provider.llmNeedsKey ? 'AI provider needs a key' : 'Local offline mode';
+    const localHost = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+    $('#providerTitle').textContent = provider.llm ? 'AI provider configured' : provider.llmNeedsKey ? 'AI provider needs a key' : 'Local offline mode';
     $('#providerSub').textContent = provider.llm ? (provider.embedding ? 'Chat + multilingual embeddings configured' : provider.embeddingNeedsKey ? 'Chat online · embeddings need a key' : 'Chat + local hybrid search') : provider.llmNeedsKey ? 'Add the provider key in server settings' : 'Search & cited evidence ready';
     $('#providerDot').classList.toggle('warning', !provider.llm);
+    $('#serviceChipLabel').textContent = provider.llm ? 'AI configured' : provider.llmNeedsKey ? 'AI setup needed' : 'Offline mode';
+    $('#serviceChip').classList.toggle('configured', !!provider.llm);
+    $('#serviceChip').classList.toggle('warning', !provider.llm);
     const configured = [provider.llm, provider.embedding, provider.ocrMode === 'remote', provider.vectorBackend.startsWith('qdrant')].some(Boolean);
-    $('#privacyNote').textContent = configured ? 'Configured AI services may receive selected content' : 'Files & indexes stay on this device';
+    $('#privacyNote').textContent = configured ? 'Selected content may be sent to AI providers' : localHost ? 'Files & indexes stay on this device' : 'Files & indexes are stored on this server';
     $('#composerPrivacy').textContent = configured ? 'Configured providers' : 'Local processing';
     $('#settingsStatus').textContent = [
       `Database: ${provider.database}.`, `Vector search: ${provider.vectorBackend}.`,
@@ -29,8 +33,8 @@ async function refreshHealth() {
       provider.embedding ? `Embeddings: ${provider.embeddingProvider} provider.` : provider.embeddingNeedsKey ? `Embeddings: ${provider.embeddingProvider} is set, but its key is missing.` : 'Embeddings: local feature-hash fallback; cross-language semantic matching may be limited.',
       provider.ocrMode === 'local' ? 'OCR: local Tesseract (Tamil + English).' : provider.ocrMode === 'remote' ? 'OCR: remote provider configured.' : 'OCR: Tesseract not found; scanned PDFs need OCR setup.'
     ].join(' ');
-    $('#storageLabel').textContent = 'Stored on this device';
-  } catch { $('#providerTitle').textContent = 'Server unavailable'; $('#providerSub').textContent = 'Start the local server'; $('#providerDot').classList.add('warning'); }
+    $('#storageLabel').textContent = localHost ? 'Stored on this device' : 'Stored on this server';
+  } catch { $('#providerTitle').textContent = 'Server unavailable'; $('#providerSub').textContent = 'Check the app connection'; $('#providerDot').classList.add('warning'); $('#serviceChipLabel').textContent = 'Service unavailable'; $('#serviceChip').classList.add('warning'); }
 }
 
 async function refreshDocuments() {
@@ -192,6 +196,7 @@ $('#newChat').addEventListener('click', resetChat); $('#clearChatFilter').addEve
 $('#searchButton').addEventListener('click', doSearch); $('#searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 $('#closeViewer').addEventListener('click', closeViewer); $('#viewerBackdrop').addEventListener('click', closeViewer); $('#goToPage').addEventListener('click', () => goPage($('#pageNumber').value)); $('#pageNumber').addEventListener('keydown', e => { if (e.key === 'Enter') goPage(e.target.value); }); $('#previousPage').addEventListener('click', () => goPage(Number($('#pageNumber').value)-1)); $('#nextPage').addEventListener('click', () => goPage(Number($('#pageNumber').value)+1));
 $('#settingsButton').addEventListener('click', () => $('#settingsDialog').showModal());
+$('#serviceChip').addEventListener('click', () => $('#settingsDialog').showModal());
 $('#openSidebar').addEventListener('click', () => $('#sidebar').classList.add('open')); $('#closeSidebar').addEventListener('click', () => $('#sidebar').classList.remove('open'));
 $$('.composer-tools').forEach(() => {});
 document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); resetChat(); } if (e.key === 'Escape') closeViewer(); });
